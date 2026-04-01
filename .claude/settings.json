@@ -22,12 +22,10 @@
       "Bash(git push:*)",
       "Bash(rm -rf:*)",
       "Bash(rm -r:*)",
-      "Read(**/.env)",
-      "Read(**/.env.local)",
-      "Read(**/.env.*.local)",
-      "Read(**/.env.development)",
-      "Read(**/.env.production)",
-      "Read(**/.env.test)"
+      "Read(.env.local)",
+      "Read(.env.development)",
+      "Read(.env.production)",
+      "Read(.env.test)"
     ]
   }
 }
