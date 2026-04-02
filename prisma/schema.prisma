@@ -60,6 +60,10 @@ model User {
   sessions  Session[]
   userRoles UserRole[]
 
+  grantAssignments  GrantAssignment[]
+  fsgUploads        FsgReport[]      @relation("FsgUploadedBy")
+  budgetUploads     BudgetUpload[]   @relation("BudgetUploadedBy")
+
   @@map("users")
 }
 
@@ -119,6 +123,103 @@ model RolePermission {
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
+
+// ─── System Settings ─────────────────────────────────────────
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// ─── ISBE Grants ─────────────────────────────────────────────
+
+model Contract {
+  id                      String    @id @default(cuid())
+  contractNo              String    @unique
+  grantName               String
+  fundingSource           String    @default("Illinois State Board of Education")
+  grantValues             String[]
+  batchCode               String?
+  fund                    String?
+  unit                    String?
+  revenueAccount          String?
+  aln                     String?
+  programPeriod           String?
+  projectStartDate        DateTime?
+  projectEndDate          DateTime?
+  completionReportDate    DateTime?
+  finalReportDate         DateTime?
+  commitmentAmount        Decimal?  @db.Decimal(14, 2)
+  cpsBudgetPerson         String?
+  isbeContactPerson       String?
+  isbePhone               String?
+  isbeFax                 String?
+  agencyLocation          String?
+  isbeContactDirectoryUrl String?
+  arAmount                Decimal?  @db.Decimal(14, 2)
+  fiscalYear              Int
+  isActive                Boolean   @default(true)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  assignments   GrantAssignment[]
+  fsgReports    FsgReport[]
+  budgetUploads BudgetUpload[]
+
+  @@map("contracts")
+}
+
+model GrantAssignment {
+  id         String   @id @default(cuid())
+  contractId String
+  userId     String
+  role       String   // "editor" | "viewer"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, userId])
+  @@map("grant_assignments")
+}
+
+model FsgReport {
+  id            String   @id @default(cuid())
+  contractId    String
+  period        String   // "current" | "next"
+  pdfStorageKey String?
+  parsedData    Json?
+  uploadedById  String?
+  uploadedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy User?    @relation("FsgUploadedBy", fields: [uploadedById], references: [id])
+
+  @@unique([contractId, period])
+  @@map("fsg_reports")
+}
+
+model BudgetUpload {
+  id            String   @id @default(cuid())
+  contractId    String
+  fiscalYear    Int
+  fileStorageKey String?
+  parsedData    Json?
+  uploadedById  String?
+  uploadedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy User?    @relation("BudgetUploadedBy", fields: [uploadedById], references: [id])
+
+  @@unique([contractId, fiscalYear])
+  @@map("budget_uploads")
 }
 
 // ─── Apps (dashboard tiles) ──────────────────────────────────

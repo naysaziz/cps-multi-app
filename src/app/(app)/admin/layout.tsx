@@ -1,12 +1,13 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Users, Shield, LayoutGrid } from "lucide-react"
+import { Users, Shield, LayoutGrid, Settings } from "lucide-react"
 
 const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/roles", label: "Roles", icon: Shield },
   { href: "/admin/apps", label: "App Tiles", icon: LayoutGrid },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
 
 export default async function AdminLayout({

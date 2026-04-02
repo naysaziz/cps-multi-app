@@ -5,11 +5,11 @@ import { prisma } from "./prisma"
 
 const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS ?? "cps.edu")
   .split(",")
-  .map((d) => d.trim())
+  .map((d) => d.trim().toLowerCase())
 
 const devAllowedEmails = (process.env.DEV_ALLOWED_EMAILS ?? "")
   .split(",")
-  .map((e) => e.trim())
+  .map((e) => e.trim().toLowerCase())
   .filter(Boolean)
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -25,7 +25,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user }) {
-      const email = user.email ?? ""
+      const email = (user.email ?? "").toLowerCase()
 
       // Dev override — specific emails always allowed
       if (devAllowedEmails.includes(email)) return true

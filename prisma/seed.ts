@@ -31,6 +31,7 @@ const APPS = [
     route: "/grants-isbe",
     requiredPermission: "grants_isbe:view",
     sortOrder: 1,
+    isActive: true,
   },
   {
     name: "Non-ISBE Grants",
@@ -129,6 +130,54 @@ async function main() {
     })
   }
 
+  // grants_coordinator — view + edit own assigned grants
+  const grantsCoordinator = await prisma.role.upsert({
+    where: { name: "grants_coordinator" },
+    create: {
+      name: "grants_coordinator",
+      displayName: "Grants Coordinator",
+      description: "Can view and edit ISBE grants assigned to them.",
+    },
+    update: {},
+  })
+
+  const coordPerms = allPermissions.filter(
+    (p) => p.resource === "grants_isbe" && ["view", "edit"].includes(p.action)
+  )
+  for (const perm of coordPerms) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: grantsCoordinator.id, permissionId: perm.id },
+      },
+      create: { roleId: grantsCoordinator.id, permissionId: perm.id },
+      update: {},
+    })
+  }
+
+  // grants_director — manage + edit all grants (Annabelle, Alma)
+  const grantsDirector = await prisma.role.upsert({
+    where: { name: "grants_director" },
+    create: {
+      name: "grants_director",
+      displayName: "Grants Director",
+      description: "Full edit access to all ISBE grants; can reassign coordinators.",
+    },
+    update: {},
+  })
+
+  const directorPerms = allPermissions.filter(
+    (p) => p.resource === "grants_isbe" && ["view", "edit", "manage"].includes(p.action)
+  )
+  for (const perm of directorPerms) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: grantsDirector.id, permissionId: perm.id },
+      },
+      create: { roleId: grantsDirector.id, permissionId: perm.id },
+      update: {},
+    })
+  }
+
   // payroll_admin — payroll resources
   const payrollAdmin = await prisma.role.upsert({
     where: { name: "payroll_admin" },
@@ -181,11 +230,24 @@ async function main() {
     await prisma.app.upsert({
       where: { slug: app.slug },
       create: app,
-      update: { description: app.description, icon: app.icon },
+      update: { description: app.description, icon: app.icon, isActive: app.isActive ?? false },
     })
   }
 
-  // 4. Super admin user
+  // 4. System settings defaults
+  console.log("  → Creating system settings...")
+  await prisma.systemSetting.upsert({
+    where: { key: "ai_provider" },
+    create: { key: "ai_provider", value: "claude" },
+    update: {},
+  })
+  await prisma.systemSetting.upsert({
+    where: { key: "ai_model" },
+    create: { key: "ai_model", value: "claude-opus-4-6" },
+    update: {},
+  })
+
+  // 5. Super admin user
   console.log("  → Creating super admin user (aziz@flowlyst.io)...")
   const adminUser = await prisma.user.upsert({
     where: { email: "aziz@flowlyst.io" },
@@ -207,7 +269,7 @@ async function main() {
 
   console.log("✅ Seed complete!")
   console.log(`   ${allPermissions.length} permissions`)
-  console.log(`   4 roles (super_admin, grants_admin, payroll_admin, viewer)`)
+  console.log(`   6 roles (super_admin, grants_admin, grants_coordinator, grants_director, payroll_admin, viewer)`)
   console.log(`   ${APPS.length} app tiles`)
   console.log(`   Super admin: aziz@flowlyst.io`)
 }

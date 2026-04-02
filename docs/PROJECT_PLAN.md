@@ -132,9 +132,91 @@ Bootstrapped on first deploy via `npx prisma db seed`:
 - Admin panel: manage users, roles, app tiles
 
 ### Phase 2 — ISBE Grants App
-- First real mini-app
-- Grant data view, role-based access
-- No email invitations needed yet — admin pre-creates users
+
+Replaces ~70 manually managed Google Sheets. Coordinators upload data, directors review.
+
+#### Data Sources
+
+| Source | Format | Upload Method |
+|--------|--------|---------------|
+| Master grant list | CSV/Excel from master Google Sheet | Bulk import per fiscal year |
+| Budget | Excel download from ISBE Frizz website | Individual upload per contract |
+| FSG report | PDF from CPS Oracle financial system | Individual upload per contract → AI parsing |
+
+#### Data Model
+
+**Contract** — primary unit of work (1 row in master sheet = 1 contract)
+
+| Field | Notes |
+|-------|-------|
+| `contractNo` | ISBE unique ID, e.g. `2026-4300-00-15016299025` — **primary identifier** |
+| `grantName` | Full descriptive name |
+| `fundingSource` | Always "Illinois State Board of Education" for this app |
+| `grantValues` | CPS Oracle grant numbers — can be multiple (stored as array), e.g. `[440054, 440055]` |
+| `batchCode` | ISBE batch code; `"Need"` = pending assignment |
+| `fund` | 3-digit CPS fund code (220, 324, 332, 334, etc.) |
+| `unit` | 4-5 digit CPS unit code (1000 = central office; others = specific schools) |
+| `revenueAccount` | 5-digit revenue account code |
+| `aln` | Federal Assistance Listing Number — blank = state-only grant; populated = federal pass-through |
+| `programPeriod` | Text display string |
+| `projectStartDate` / `projectEndDate` | Dates |
+| `completionReportDate` / `finalReportDate` | Dates |
+| `commitmentAmount` | Dollar amount from ISBE |
+| `cpsBudgetPerson` | Budget staff name |
+| `isbeContactPerson` / `isbePhone` / `isbeFax` | ISBE-side contact |
+| `agencyLocation` | e.g. "Springfield, IL" |
+| `isbeContactDirectoryUrl` | URL to ISBE contact page |
+| `arAmount` | Accounts receivable amount |
+| `fiscalYear` | e.g. `2026` |
+
+**FsgReport** — 1 per contract normally; 2 during fiscal year crossover
+
+| Field | Notes |
+|-------|-------|
+| `contractId` | FK to Contract |
+| `period` | `"current"` or `"next"` (crossover only) |
+| `pdfStorageKey` | File storage reference |
+| `parsedData` | JSON of AI-extracted line items |
+| `uploadedAt` / `uploadedBy` | Audit fields |
+
+**BudgetUpload** — 1 per contract, from ISBE Frizz (Excel)
+
+**GrantAssignment** — access control per contract
+
+| Field | Notes |
+|-------|-------|
+| `contractId` | FK to Contract |
+| `userId` | FK to User |
+| `role` | `"editor"` or `"viewer"` |
+
+#### Access Rules
+
+- **One editor per contract** — assigned coordinator; reassignable (old editor loses edit)
+- **Multiple viewers per contract** — anyone with `grants_isbe:view`
+- **Directors (Annabelle, Alma)** — always have edit access to all contracts via role-level permission (`grants_isbe:edit`), no per-contract assignment needed
+- Directors can reassign contracts between coordinators
+
+#### Views
+
+1. **Grant list** — table of all contracts for the current FY; coordinator sees only assigned; directors see all; filterable by status, coordinator, fund
+2. **Grant detail** — contract metadata + budget + FSG tabs; shows all grantValues aggregated
+3. **FSG upload + parse** — upload PDF → AI extracts line items → review/confirm → stored
+4. **Budget upload** — drop Excel from Frizz → parsed and stored
+5. **Master import** — bulk upload the FY master list CSV to seed all contracts for a new fiscal year
+
+#### FSG Parsing Strategy
+
+FSG PDFs use CID-encoded fonts — standard text extraction (pdfplumber, etc.) produces garbled output. Approach:
+- Upload PDF to server → send to Claude API as vision input
+- Extract structured data: expenditure lines by object code, amounts, period dates
+- Return JSON → coordinator reviews → confirms → saved to DB
+
+#### Key Business Rules
+
+- `batchCode = "Need"` → FSG not yet available (ISBE hasn't issued batch code)
+- Each FSG covers all `grantValues` under the contract (ISBE issues per contract, not per fund code)
+- Budget comes from ISBE Frizz (not CPS Oracle) — one file per contract, no bulk download
+- FSG comes from CPS Oracle — one PDF per contract per reporting period
 
 ### Future Phases
 - Non-ISBE Grants app
