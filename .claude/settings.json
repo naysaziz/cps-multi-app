@@ -16,7 +16,13 @@
       "Bash(npx prisma:*)",
       "Bash(npx shadcn:*)",
       "Bash(npx shadcn@latest:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(gws sheets spreadsheets get:*)",
+      "Bash(gws sheets spreadsheets values get:*)",
+      "Bash(gws sheets spreadsheets values batchGet:*)",
+      "Bash(gws drive files get:*)",
+      "Bash(gws drive files list:*)",
+      "Bash(gws schema:*)"
     ],
     "deny": [
       "Bash(git push:*)",
