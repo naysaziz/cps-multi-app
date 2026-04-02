@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma"
 function isDirectorUser(user: { isSuperAdmin: boolean; permissions: string[] }) {
   return (
     user.isSuperAdmin ||
-    user.permissions.includes("grants_isbe:edit") ||
     user.permissions.includes("grants_isbe:manage")
   )
 }

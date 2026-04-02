@@ -9,7 +9,6 @@ async function resolveEditAccess(contractId: string) {
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   if (!isDirector) {

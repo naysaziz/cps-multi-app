@@ -13,7 +13,6 @@ export async function PATCH(
 
   const isDirector =
     session?.user.isSuperAdmin ||
-    session?.user.permissions.includes("grants_isbe:edit") ||
     session?.user.permissions.includes("grants_isbe:manage")
 
   if (!isDirector) return new NextResponse("Forbidden", { status: 403 })
@@ -60,7 +59,6 @@ export async function DELETE(
 
   const isDirector =
     session?.user.isSuperAdmin ||
-    session?.user.permissions.includes("grants_isbe:edit") ||
     session?.user.permissions.includes("grants_isbe:manage")
 
   if (!isDirector) return new NextResponse("Forbidden", { status: 403 })

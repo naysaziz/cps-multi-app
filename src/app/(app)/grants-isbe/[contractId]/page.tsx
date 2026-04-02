@@ -34,7 +34,6 @@ export default async function GrantDetailPage({
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   const assignment = contract.assignments.find((a) => a.userId === session.user.id)

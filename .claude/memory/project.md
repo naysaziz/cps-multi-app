@@ -96,7 +96,21 @@ Routes: `/`, `/login`, `/dashboard`, `/admin/users`, `/admin/roles`, `/admin/app
 - `ALLOWED_EMAIL_DOMAINS=cps.edu`, `DEV_ALLOWED_EMAILS=aziz@flowlyst.io`
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`
 
+## Permission rules — ISBE Grants (confirmed correct)
+
+- `grants_isbe:manage` = director-level — can view all contracts, assign/reassign, import
+- `grants_isbe:edit` = coordinator-level — can edit/upload on contracts assigned to them as editor
+- `grants_isbe:view` = base access — required to enter the app at all
+
+**Per-contract access:**
+- `editor` assignment → can upload budget, FSG, edit contract data
+- `viewer` assignment → read-only; cannot upload or edit anything
+- Directors bypass per-contract assignments — they always have full access via role permission
+
+**FSG next period tab:** hidden for viewers when no next-period report has been uploaded yet (intentional — nothing to show)
+
 ## Pending items
 
 - `npm install xlsx` — Excel budget parsing (needs user approval)
 - Per-grant AI provider selector (future work)
+- Analysis pages: Cash Summary, ISBE report, Reconciliation (not yet built — need requirements)

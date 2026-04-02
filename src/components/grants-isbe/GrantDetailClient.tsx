@@ -59,7 +59,7 @@ export default function GrantDetailClient({
               onClick={() => setShowAssign(true)}
               className="text-sm text-cobalt hover:underline"
             >
-              Reassign
+              {editor ? "Reassign" : "Assign"}
             </button>
           )}
         </div>
