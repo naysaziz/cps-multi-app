@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
+import Image from "next/image"
 
 const ERROR_MESSAGES: Record<string, string> = {
   unauthorized_domain:
@@ -35,7 +36,7 @@ function LoginContent() {
         {/* Logo area */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-xl shadow-lg mb-4">
-            <span className="text-cobalt font-bold text-2xl">CPS</span>
+            <Image src="/cps-logo-2024_cobaltblue.svg" alt="CPS" width={48} height={48} className="w-12 h-12 object-contain" />
           </div>
           <h1 className="text-white text-2xl font-semibold tracking-tight">
             Staff Portal

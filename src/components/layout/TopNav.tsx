@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 import { Session } from "next-auth"
 import { LogOut, ChevronDown, Settings } from "lucide-react"
 import { useState } from "react"
@@ -24,8 +25,8 @@ export default function TopNav({ session }: TopNavProps) {
     <header className="h-15 bg-cobalt flex items-center justify-between px-6 shadow-md shrink-0" style={{ height: 60 }}>
       {/* Left: Logo + Title */}
       <Link href="/dashboard" className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-8 h-8 bg-white rounded-md">
-          <span className="text-cobalt font-bold text-xs leading-none">CPS</span>
+        <div className="flex items-center justify-center h-8">
+          <Image src="/cps-logo-2024_cobaltblue.svg" alt="CPS" width={32} height={32} className="h-8 w-auto brightness-0 invert" />
         </div>
         <span className="text-white font-semibold text-sm tracking-wide">
           Staff Portal
