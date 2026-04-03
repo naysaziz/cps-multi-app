@@ -25,19 +25,20 @@ Always check `node_modules/next/dist/docs/` before writing Next.js code — brea
 ## Prisma 7
 
 1. `url` and `directUrl` NOT allowed in schema.prisma — put URL in `prisma.config.ts`
-2. `directUrl` is NOT valid in prisma.config.ts datasource (type error)
-3. Runtime client: `new PrismaNeon({ connectionString: process.env.DATABASE_URL! })`
-4. Seed command configured in `prisma.config.ts` under `migrations.seed`, not package.json — use `tsx prisma/seed.ts`
-5. `Decimal` fields serialize as `{}` when passed to client components — use `String(v)` at server boundary
+2. `directUrl` is NOT valid in prisma.config.ts datasource (type error) — don't add it
+3. Runtime client: `new PrismaNeon({ connectionString: process.env.DATABASE_URL! })` + `neonConfig.webSocketConstructor = ws`
+4. `provider = "prisma-client-js"` still works, generates to node_modules/@prisma/client
+5. Seed command configured in `prisma.config.ts` under `migrations.seed`, NOT in package.json — use `tsx prisma/seed.ts` (ts-node with `--compiler-options` fails due to shell quoting issues in Prisma's command runner)
+6. `Decimal` fields serialize as `{}` when passed to client components — `@prisma/client/runtime/library` subpath does NOT exist in Prisma 7; use `String(v)` at server boundary instead of importing Decimal
 
 ---
 
 ## Tailwind v4
 
-No `tailwind.config.ts` — define tokens in `src/app/globals.css` under `@theme {}` block. Use utility classes normally (`bg-cobalt`, `text-cobalt`).
+No `tailwind.config.ts` — define tokens in `src/app/globals.css` under `@theme {}` block. Use `@import "tailwindcss"` at top. Use utility classes normally (`bg-cobalt`, `text-cobalt`).
 
 ---
 
 ## shadcn v4
 
-`npx shadcn init` adds Geist font to layout.tsx automatically — always remove it and restore Helvetica Neue (CPS branding requirement).
+`npx shadcn init` adds Geist font to layout.tsx automatically — always remove it and restore Helvetica Neue (CPS branding requirement). Also installs `tw-animate-css` and `@base-ui/react` as deps automatically.
