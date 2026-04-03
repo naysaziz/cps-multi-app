@@ -63,6 +63,7 @@ model User {
   grantAssignments  GrantAssignment[]
   fsgUploads        FsgReport[]      @relation("FsgUploadedBy")
   budgetUploads     BudgetUpload[]   @relation("BudgetUploadedBy")
+  cashEntries       CashEntry[]      @relation("CashEntryCreatedBy")
 
   @@map("users")
 }
@@ -169,6 +170,7 @@ model Contract {
   assignments   GrantAssignment[]
   fsgReports    FsgReport[]
   budgetUploads BudgetUpload[]
+  cashEntries   CashEntry[]
 
   @@map("contracts")
 }
@@ -220,6 +222,27 @@ model BudgetUpload {
 
   @@unique([contractId, fiscalYear])
   @@map("budget_uploads")
+}
+
+model CashEntry {
+  id                   String    @id @default(cuid())
+  contractId           String
+  fiscalYear           Int
+  invoiceNo            String?
+  claimPeriod          String?       // free text: "7/1/24-9/30/24"
+  accountingPeriodDate DateTime?
+  claimedAmount        Decimal?  @db.Decimal(14, 2)
+  cashReceipts         Decimal?  @db.Decimal(14, 2)
+  advanceOffset        Decimal?  @db.Decimal(14, 2)
+  comments             String?
+  createdById          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  contract  Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("CashEntryCreatedBy", fields: [createdById], references: [id])
+
+  @@map("cash_entries")
 }
 
 // ─── Apps (dashboard tiles) ──────────────────────────────────

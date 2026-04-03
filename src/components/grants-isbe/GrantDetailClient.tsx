@@ -2,19 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ContractDetail } from "@/types"
+import { ContractDetail, CashEntry } from "@/types"
 import GrantInfoTab from "./GrantInfoTab"
 import GrantBudgetTab from "./GrantBudgetTab"
 import GrantFsgTab from "./GrantFsgTab"
+import GrantCashSummaryTab from "./GrantCashSummaryTab"
+import GrantIsbeReportTab from "./GrantIsbeReportTab"
+import GrantReconciliationTab from "./GrantReconciliationTab"
 import AssignEditorPanel from "./AssignEditorPanel"
 
-type Tab = "info" | "budget" | "fsg"
+type Tab = "info" | "budget" | "fsg" | "cash" | "isbe-report" | "reconciliation"
 
 type Props = {
   contract: ContractDetail
   allUsers: { id: string; name: string | null; email: string | null }[]
   isDirector: boolean
   currentUserId: string
+  cashEntries: CashEntry[]
 }
 
 export default function GrantDetailClient({
@@ -22,6 +26,7 @@ export default function GrantDetailClient({
   allUsers,
   isDirector,
   currentUserId,
+  cashEntries,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info")
   const [showAssign, setShowAssign] = useState(false)
@@ -32,6 +37,9 @@ export default function GrantDetailClient({
     { key: "info", label: "Info" },
     { key: "budget", label: "Budget" },
     { key: "fsg", label: "FSG Reports" },
+    { key: "cash", label: "Cash Summary" },
+    { key: "isbe-report", label: "ISBE Report" },
+    { key: "reconciliation", label: "Reconciliation" },
   ]
 
   return (
@@ -87,7 +95,7 @@ export default function GrantDetailClient({
 
       {/* Tabs */}
       <div className="border-b border-border mb-6">
-        <nav className="flex gap-0">
+        <nav className="flex flex-wrap gap-0">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -109,6 +117,11 @@ export default function GrantDetailClient({
                   {contract.budgetUploads.length}
                 </span>
               )}
+              {tab.key === "cash" && cashEntries.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 text-xs bg-cobalt text-white rounded-full">
+                  {cashEntries.length}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -121,6 +134,19 @@ export default function GrantDetailClient({
       )}
       {activeTab === "fsg" && (
         <GrantFsgTab contract={contract} canEdit={contract.canEdit} />
+      )}
+      {activeTab === "cash" && (
+        <GrantCashSummaryTab
+          contract={contract}
+          initialEntries={cashEntries}
+          canEdit={contract.canEdit}
+        />
+      )}
+      {activeTab === "isbe-report" && (
+        <GrantIsbeReportTab contract={contract} cashEntries={cashEntries} />
+      )}
+      {activeTab === "reconciliation" && (
+        <GrantReconciliationTab contract={contract} />
       )}
 
       {/* Assign editor panel */}

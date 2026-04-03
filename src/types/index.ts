@@ -73,6 +73,22 @@ export type ContractDetail = Omit<ContractSummary, "fsgReports" | "budgetUploads
   }[]
 }
 
+export type CashEntry = {
+  id: string
+  contractId: string
+  fiscalYear: number
+  invoiceNo: string | null
+  claimPeriod: string | null
+  accountingPeriodDate: string | null
+  claimedAmount: string | null   // serialized Decimal
+  cashReceipts: string | null    // serialized Decimal
+  advanceOffset: string | null   // serialized Decimal
+  comments: string | null
+  createdById: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type RoleWithPermissions = {
   id: string
   name: string

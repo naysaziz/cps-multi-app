@@ -1,0 +1,16 @@
+,,100,200,300,400,500,600,700,800,
+State Function Code Description,Function Code,Salaries,Employee Benefits,Purchased Services,Supplies Materials,Capital Outlay,Other Objects,Transfers,Tuition,Total
+Instruction,1000,"80,427,814","14,899,389","5,846,692","1,576,883","162,671",0,0,0,"102,913,449"
+Attendance/Social Work Services,2110,"2,186,533","581,746","371,652","12,754","1,490",0,0,0,"3,154,175"
+Guidance Services,2120,"5,227,992","1,313,598","2,974,202","1,708",0,0,0,0,"9,517,500"
+Health Services,2130,"49,101","9,841",640,"1,540",0,0,0,0,"61,122"
+Improvement of Instructional Services,2210,"13,166,372","3,368,568","450,261","25,897",0,0,0,0,"17,011,098"
+Education Media Services,2220,"2,250,734","606,968","49,415","64,169","73,872",0,0,0,"3,045,158"
+Assessment and Testing,2230,"86,085","24,697","53,390","44,754",0,0,0,0,"208,926"
+Support Services - General Admin,2300,"982,375","199,825","13,477",0,0,0,0,0,"1,195,677"
+Fiscal Services,2520,"93,854","21,221","2,216",0,0,0,0,0,"117,291"
+Operations Maintenance Plant Services,2540,"1,697,478","624,634","25,547",165,0,0,0,0,"2,347,824"
+Pupil Transportation Services,2550,0,0,"895,680",0,0,0,0,0,"895,680"
+Other Supporting Services,2900,"2,861,882","622,981","46,256",600510,0,0,0,0,"4,131,629"
+Community Services,3000,"3,425,541","962,004","21,148,950","539,288","66,349",0,0,0,"26,142,132"
+Payments - Other Gov't Units,4000,0,0,"716,730",567,0,0,0,0,"717,297"

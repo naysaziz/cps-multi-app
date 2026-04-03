@@ -11,16 +11,44 @@ type Props = {
 type FsgPeriod = "current" | "next"
 
 type ParsedFsgData = {
+  reportTitle?: string
+  grantName?: string
   reportDate?: string
+  reportGeneratedAt?: string
+  reportGeneratedLabel?: string
   grantValues?: string[]
   lines?: {
+    accountCode?: string   // present in new parser format
+    functionDescription?: string
     objectCode: string
+    objectDescription?: string
     description: string
     currentPeriod: number
     inceptionToDate: number
   }[]
   totalCurrentPeriod?: number
   totalInceptionToDate?: number
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-")
+    return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  }
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
 }
 
 export default function GrantFsgTab({ contract, canEdit }: Props) {
@@ -175,6 +203,8 @@ function FsgReportView({
   uploading: boolean
 }) {
   const data = report.parsedData as ParsedFsgData | null
+  const hasAccountCode = data?.lines?.some((l) => l.accountCode) ?? false
+  const hasFunctionDescription = data?.lines?.some((l) => l.functionDescription) ?? false
 
   return (
     <div>
@@ -208,12 +238,50 @@ function FsgReportView({
         )}
       </div>
 
+      <div className="mb-5 rounded-xl border border-border bg-white px-5 py-4 shadow-sm">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-charcoal-muted">
+          FSG Report Metadata
+        </p>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4">
+          {[
+            ["Report Title", data?.reportTitle],
+            ["Grant Name", data?.grantName],
+            ["Grant Code", data?.grantValues?.join(", ") || null],
+            ["Report Date", formatDate(data?.reportDate)],
+            ["Generated At", formatDate(data?.reportGeneratedAt)],
+            ["Generated Label", data?.reportGeneratedLabel],
+            ["Period", period === "current" ? "Current" : "Next (FY Crossover)"],
+            [
+              "Uploaded",
+              new Date(report.uploadedAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
+            ],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="mb-0.5 text-xs font-medium uppercase tracking-wide text-charcoal-muted">
+                {label}
+              </dt>
+              <dd className="text-charcoal">{value || <span className="italic text-gray-400">—</span>}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
       {data?.lines && data.lines.length > 0 ? (
         <table className="w-full text-sm border border-border rounded-lg overflow-hidden">
           <thead className="bg-gray-50 border-b border-border">
             <tr>
+              {hasAccountCode && (
+                <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Acct</th>
+              )}
+              {hasFunctionDescription && (
+                <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Function</th>
+              )}
               <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Object Code</th>
-              <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Description</th>
+              <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Object</th>
               <th className="text-right px-4 py-2.5 font-medium text-charcoal-muted">Current Period</th>
               <th className="text-right px-4 py-2.5 font-medium text-charcoal-muted">Inception to Date</th>
             </tr>
@@ -221,8 +289,20 @@ function FsgReportView({
           <tbody className="divide-y divide-border">
             {data.lines.map((line, i) => (
               <tr key={i} className="hover:bg-gray-50">
+                {hasAccountCode && (
+                  <td className="px-4 py-2 font-mono text-xs text-charcoal-muted">
+                    {line.accountCode ?? "—"}
+                  </td>
+                )}
+                {hasFunctionDescription && (
+                  <td className="px-4 py-2 text-charcoal">
+                    {line.functionDescription ?? <span className="text-gray-400">—</span>}
+                  </td>
+                )}
                 <td className="px-4 py-2 font-mono text-xs">{line.objectCode}</td>
-                <td className="px-4 py-2 text-charcoal">{line.description}</td>
+                <td className="px-4 py-2 text-charcoal">
+                  {line.objectDescription ?? line.description}
+                </td>
                 <td className="px-4 py-2 text-right tabular-nums">
                   {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
                     line.currentPeriod
@@ -239,7 +319,12 @@ function FsgReportView({
           {(data.totalCurrentPeriod != null || data.totalInceptionToDate != null) && (
             <tfoot className="bg-gray-50 border-t border-border">
               <tr>
-                <td colSpan={2} className="px-4 py-2.5 font-medium text-charcoal">Total</td>
+                <td
+                  colSpan={hasAccountCode ? (hasFunctionDescription ? 4 : 3) : hasFunctionDescription ? 3 : 2}
+                  className="px-4 py-2.5 font-medium text-charcoal"
+                >
+                  Total
+                </td>
                 <td className="px-4 py-2.5 text-right font-medium tabular-nums text-charcoal">
                   {data.totalCurrentPeriod != null &&
                     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(

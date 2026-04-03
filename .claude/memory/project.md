@@ -8,7 +8,7 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 **Why:** User needs a working demo to show CPS for approval before full buildout.
 
-**Current phase:** Phase 2 COMPLETE — ISBE Grants app fully built and passing build. Next: demo, then Phase 3 (Non-ISBE Grants or Payroll TBD).
+**Current phase:** Phase 2.5 COMPLETE — Analysis pages (Cash Summary, ISBE Report, Reconciliation) built on branch `feature/analysis-pages`. Latest work focused on hardening budget/FSG upload parsing, analysis tab compatibility, and FSG metadata display before demo review.
 
 **How to apply:** Prioritize demoable features. Don't add audit logging, permission caching, or session strategy optimizations until demo-approved.
 
@@ -116,11 +116,24 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
   - **OpenAI** — Responses API, `input_file` with `data:application/pdf;base64,...`
   - **Google** — Generative Language API, `inline_data` with `application/pdf`
   - All share one `EXTRACTION_PROMPT` constant
+  - Latest prompt update teaches CPS FSG structure explicitly:
+    - first column = function description
+    - second column = function/account code aligned to budget account code
+    - header `1..8` maps to object codes `100..800`
+    - parser should extract report metadata (`reportTitle`, `grantName`, `reportDate`, generated/run date info) in addition to line items
+  - Upload flow now tries the configured provider first, then falls back to other providers with available API keys if the first provider is quota-blocked or errors
 - Admin UI to switch provider/model: `/admin/settings`
 
 ### Budget parsing
 
-- `src/lib/budget-parser.ts` — CSV works; `.xlsx` stub (returns empty) — needs `npm install xlsx` (pending user approval)
+- `src/lib/budget-parser.ts` — supports:
+  - wide ISBE Frizz Excel/CSV export with separate `Acct` + `Obj` columns
+  - compact 4-column CSV export like `docs/Budget.csv` where:
+    - column B = combined account cell such as `1000 Instruction`
+    - column C = object cell such as `Salaries (100)`
+    - column D = amount
+- Excel uploads prompt user to choose the budget worksheet when workbook has multiple tabs
+- Parser now throws a clear error if no recognizable budget rows are found instead of silently storing an empty upload
 
 ---
 
@@ -169,8 +182,24 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 ---
 
+## What's built — Phase 2.5 Analysis Pages (complete, branch: feature/analysis-pages)
+
+- **Budget parser fixed**: now reads accountCode (col E), objectCode (col F), description stripped of parens (col C), amount (col D). Excel (.xlsx) support implemented via `xlsx` package.
+- **Budget parser expanded further**: also supports compact 4-column budget CSV exports (`docs/Budget.csv` style) by deriving `accountCode` from combined account cell and `objectCode` from object description parentheses.
+- **FSG parser updated**: FsgLine type now has `accountCode` + `objectCode` as separate fields. Prompt now encodes CPS-specific FSG rules, including object-header `1..8` to `100..800` mapping and extraction of top-of-report metadata. Existing FSG records may need re-upload to pick up the richer parsedData shape.
+- **CashEntry model**: migrated to DB (`cash_entries` table). Manual ISBE invoice/receipt ledger per contract.
+- **API routes**: `/api/grants-isbe/[contractId]/cash` (GET/POST) and `/cash/[entryId]` (PATCH/DELETE)
+- **Three new tabs**: Cash Summary, ISBE Report, Reconciliation — all modern CPS-branded with stat cards, color coding, dynamic rows/columns from actual data (nothing hardcoded)
+- **GrantBudgetTab**: supports Excel worksheet picking before upload, and displays `accountCode` when present
+- **GrantFsgTab**: now surfaces report identity metadata (report title, grant name, report date, generated date/label, grant code, period) so uploaded FSGs can be verified visually and not mismatched
+- **Analysis tab hardening**: recent review/fix pass addressed ordering/date issues in Cash Summary and tightened math/compatibility assumptions in ISBE Report/Reconciliation, though those surfaces should still be checked against fresh re-uploaded sample data during demo prep
+
+---
+
 ## Pending items
 
-- `npm install xlsx` — Excel budget parsing (needs user approval before installing)
+- Merge `feature/analysis-pages` into main after demo review
+- Verify fresh FSG re-upload against sample PDFs (`docs/440054-440055 Title IV A 24-4400 FSG Jun 11.24.pdf`, `docs/440054-440055 Title IV A 24-4400 FSG Nov 11.24.pdf`) and confirm analysis tabs consume the new parsedData correctly
+- Verify budget upload end-to-end with both compact CSV (`docs/Budget.csv`) and multi-tab Excel workbook flow
 - Per-grant AI provider selector (future work)
-- Analysis pages: Cash Summary, ISBE report, Reconciliation (not yet built — need requirements)
+- Phase 3: Non-ISBE Grants or Payroll (TBD after CPS demo approval)

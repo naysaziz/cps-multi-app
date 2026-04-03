@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { ContractDetail } from "@/types"
+import { ContractDetail, CashEntry } from "@/types"
 import GrantDetailClient from "@/components/grants-isbe/GrantDetailClient"
 
 export default async function GrantDetailPage({
@@ -51,6 +51,28 @@ export default async function GrantDetailPage({
       })
     : []
 
+  // Fetch cash entries
+  const rawCashEntries = await prisma.cashEntry.findMany({
+    where: { contractId },
+    orderBy: [{ accountingPeriodDate: "asc" }, { createdAt: "asc" }],
+  })
+
+  const cashEntries: CashEntry[] = rawCashEntries.map((e) => ({
+    id: e.id,
+    contractId: e.contractId,
+    fiscalYear: e.fiscalYear,
+    invoiceNo: e.invoiceNo,
+    claimPeriod: e.claimPeriod,
+    accountingPeriodDate: e.accountingPeriodDate?.toISOString() ?? null,
+    claimedAmount: e.claimedAmount != null ? String(e.claimedAmount) : null,
+    cashReceipts: e.cashReceipts != null ? String(e.cashReceipts) : null,
+    advanceOffset: e.advanceOffset != null ? String(e.advanceOffset) : null,
+    comments: e.comments,
+    createdById: e.createdById,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  }))
+
   const decStr = (v: unknown) => (v != null ? String(v) : null)
   const dtStr = (v: Date | null) => v?.toISOString() ?? null
 
@@ -85,6 +107,7 @@ export default async function GrantDetailPage({
       allUsers={allUsers}
       isDirector={isDirector}
       currentUserId={session.user.id}
+      cashEntries={cashEntries}
     />
   )
 }

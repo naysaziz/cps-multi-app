@@ -10,11 +10,11 @@ An internal multi-app dashboard platform for Chicago Public Schools (CPS) staff.
 
 | Layer | Choice | Notes |
 |-------|--------|-------|
-| Framework | Next.js 15 App Router | SSR, route groups, middleware auth guards |
+| Framework | Next.js 16 App Router | SSR, route groups, middleware auth guards |
 | Auth | NextAuth v5 (Auth.js) | Google provider, Prisma adapter, session hydrates roles/permissions |
-| ORM | Prisma + @prisma/adapter-neon | Serverless HTTP adapter for Neon |
+| ORM | Prisma 7 + @prisma/adapter-neon | WebSocket adapter for Neon serverless |
 | Database | Neon Postgres | Serverless; migrate to RDS/Azure post-approval |
-| UI | Tailwind CSS + shadcn/ui (New York) | CPS design tokens as CSS variables |
+| UI | Tailwind CSS v4 + shadcn/ui (New York) | CPS design tokens as CSS variables in globals.css |
 | Deployment | Vercel | Zero-config Next.js + Neon branch-per-preview |
 
 ---
@@ -31,6 +31,7 @@ An internal multi-app dashboard platform for Chicago Public Schools (CPS) staff.
 | Background | `#f5f6f8` |
 | Border | `#e2e4e9` |
 | Font | Helvetica Neue, Helvetica, Arial, sans-serif |
+| Logo | `public/cps-logo-2024_cobaltblue.svg` |
 
 ---
 
@@ -54,6 +55,13 @@ An internal multi-app dashboard platform for Chicago Public Schools (CPS) staff.
 
 Roles are collections of permissions. Users can have multiple roles. All loaded into `session.user.permissions[]` at login — no extra DB call needed in components.
 
+**ISBE Grants permission levels:**
+- `grants_isbe:manage` = director — view all contracts, assign/reassign, import, full access
+- `grants_isbe:edit` = coordinator — upload/edit on contracts assigned to them as editor
+- `grants_isbe:view` = base access — required to enter the app at all
+
+Director check must always be: `isSuperAdmin || permissions.includes("grants_isbe:manage")` — never include `grants_isbe:edit` in a director check.
+
 ---
 
 ## Database Schema
@@ -62,11 +70,17 @@ Roles are collections of permissions. Users can have multiple roles. All loaded 
 users              — NextAuth user table + isActive flag
 accounts           — NextAuth OAuth accounts (required)
 sessions           — NextAuth sessions (required)
-roles              — e.g. super_admin, grants_admin, viewer (isSystem protects built-ins)
+roles              — e.g. super_admin, grants_coordinator, grants_director
 permissions        — resource × action pairs
 user_roles         — many-to-many: users ↔ roles
 role_permissions   — many-to-many: roles ↔ permissions
 apps               — dashboard tiles: name, slug, route, icon, isActive, requiredPermission
+system_settings    — key/value store: ai_provider, ai_model
+contracts          — ISBE grant contracts (primary unit of work)
+grant_assignments  — per-contract access: editor or viewer
+fsg_reports        — FSG PDFs + AI-parsed expenditure data (current/next period)
+budget_uploads     — ISBE Frizz budget files + parsed line items
+cash_entries       — (Phase 2.5) manual ISBE payment transaction ledger
 ```
 
 ---
@@ -75,37 +89,65 @@ apps               — dashboard tiles: name, slug, route, icon, isActive, requi
 
 ```
 cps-app/
-├── .claude/settings.json              # Claude Code permissions config
+├── .claude/
+│   ├── settings.json
+│   └── memory/                        # Claude session memory
 ├── docs/PROJECT_PLAN.md               # This file
+├── docs/Grant Worksheet_Template.xlsx # Reference template for analysis pages
 ├── CLAUDE.md                          # Claude Code project context
+├── AGENTS.md                          # Notes on stack breaking changes
 ├── middleware.ts                      # Auth guard + admin RBAC
 ├── prisma/
 │   ├── schema.prisma                  # Full data model
-│   └── seed.ts                        # Permissions matrix, roles, app tiles, super admin
-├── public/cps-logo.svg
+│   ├── prisma.config.ts               # Datasource URL for CLI (Prisma 7)
+│   └── seed.ts                        # Permissions, roles, app tiles, super admin, system settings
+├── public/cps-logo-2024_cobaltblue.svg
 └── src/
     ├── app/
-    │   ├── globals.css                # CPS design tokens
+    │   ├── globals.css                # CPS design tokens (@theme block — Tailwind v4)
     │   ├── layout.tsx
     │   ├── (auth)/login/page.tsx      # Google sign-in (CPS branded)
     │   ├── (app)/
     │   │   ├── layout.tsx             # Auth shell + TopNav
     │   │   ├── dashboard/page.tsx     # App tile launcher
-    │   │   ├── admin/                 # User/role/app management (super_admin only)
-    │   │   └── [appSlug]/page.tsx     # Future mini-app container
+    │   │   ├── admin/                 # User/role/app/settings management (super_admin only)
+    │   │   └── grants-isbe/
+    │   │       ├── page.tsx           # Contract list
+    │   │       ├── [contractId]/page.tsx  # Contract detail (Info/Budget/FSG/analysis tabs)
+    │   │       └── import/page.tsx    # Director-only master CSV import
     │   └── api/
     │       ├── auth/[...nextauth]/
-    │       └── admin/users/ + roles/
+    │       ├── admin/
+    │       └── grants-isbe/
+    │           ├── route.ts           # GET list + POST bulk upsert
+    │           └── [contractId]/
+    │               ├── route.ts       # GET + PATCH
+    │               ├── assign/        # PATCH (assign/reassign) + DELETE
+    │               ├── fsg/           # GET + POST + DELETE + upload/
+    │               ├── budget/        # GET + POST + upload/
+    │               └── cash/          # GET + POST + [entryId]/ (Phase 2.5)
     ├── components/
     │   ├── ui/                        # shadcn primitives
     │   ├── layout/TopNav.tsx
     │   ├── dashboard/AppTile + AppGrid
-    │   └── admin/UserTable + InviteUserModal + RoleCard + PermissionToggle
+    │   ├── admin/
+    │   └── grants-isbe/
+    │       ├── GrantListClient.tsx
+    │       ├── GrantDetailClient.tsx
+    │       ├── GrantInfoTab.tsx
+    │       ├── GrantBudgetTab.tsx
+    │       ├── GrantFsgTab.tsx
+    │       ├── GrantCashSummaryTab.tsx    # Phase 2.5
+    │       ├── GrantIsbeReportTab.tsx     # Phase 2.5
+    │       ├── GrantReconciliationTab.tsx # Phase 2.5
+    │       ├── AssignEditorPanel.tsx
+    │       └── MasterImportClient.tsx
     ├── lib/
     │   ├── auth.ts                    # NextAuth config
-    │   ├── prisma.ts                  # Neon-compatible singleton
-    │   ├── permissions.ts             # hasPermission() helpers
-    │   └── utils.ts                   # cn()
+    │   ├── prisma.ts                  # Neon WebSocket adapter singleton
+    │   ├── fsg-parser.ts              # Multi-provider AI PDF parser
+    │   ├── budget-parser.ts           # CSV/Excel budget parser
+    │   └── utils.ts
     └── types/
         ├── next-auth.d.ts             # Session augmentation
         └── index.ts
@@ -113,25 +155,15 @@ cps-app/
 
 ---
 
-## Seed Data
-
-Bootstrapped on first deploy via `npx prisma db seed`:
-
-- **Permissions**: 28 total (7 resources × 4 actions)
-- **Roles**: `super_admin` (all), `grants_admin` (isbe + non-isbe), `payroll_admin` (payroll + final), `viewer` (all:view)
-- **App tiles**: ISBE Grants, Non-ISBE Grants, Payroll Efficiencies, Payroll Final Payout (all `isActive: false` until built)
-- **Super admin**: `aziz@flowlyst.io` → `super_admin` role
-
----
-
 ## Phase Roadmap
 
-### Phase 1 — Foundation (current)
+### Phase 1 — Foundation ✅ Complete
+
 - Google Auth + dashboard shell
 - Role/permission system
-- Admin panel: manage users, roles, app tiles
+- Admin panel: manage users, roles, app tiles, AI provider settings
 
-### Phase 2 — ISBE Grants App
+### Phase 2 — ISBE Grants App ✅ Complete
 
 Replaces ~70 manually managed Google Sheets. Coordinators upload data, directors review.
 
@@ -139,25 +171,25 @@ Replaces ~70 manually managed Google Sheets. Coordinators upload data, directors
 
 | Source | Format | Upload Method |
 |--------|--------|---------------|
-| Master grant list | CSV/Excel from master Google Sheet | Bulk import per fiscal year |
+| Master grant list | CSV from master Google Sheet | Bulk import per fiscal year |
 | Budget | Excel download from ISBE Frizz website | Individual upload per contract |
 | FSG report | PDF from CPS Oracle financial system | Individual upload per contract → AI parsing |
 
 #### Data Model
 
-**Contract** — primary unit of work (1 row in master sheet = 1 contract)
+**Contract** — primary unit of work
 
 | Field | Notes |
 |-------|-------|
 | `contractNo` | ISBE unique ID, e.g. `2026-4300-00-15016299025` — **primary identifier** |
 | `grantName` | Full descriptive name |
-| `fundingSource` | Always "Illinois State Board of Education" for this app |
-| `grantValues` | CPS Oracle grant numbers — can be multiple (stored as array), e.g. `[440054, 440055]` |
-| `batchCode` | ISBE batch code; `"Need"` = pending assignment |
-| `fund` | 3-digit CPS fund code (220, 324, 332, 334, etc.) |
-| `unit` | 4-5 digit CPS unit code (1000 = central office; others = specific schools) |
+| `fundingSource` | Always "Illinois State Board of Education" for ISBE grants |
+| `grantValues` | CPS Oracle grant numbers — can be multiple (stored as array) |
+| `batchCode` | ISBE batch code; `"Need"` = pending assignment → FSG not yet available |
+| `fund` | 3-digit CPS fund code |
+| `unit` | 4-5 digit CPS unit code |
 | `revenueAccount` | 5-digit revenue account code |
-| `aln` | Federal Assistance Listing Number — blank = state-only grant; populated = federal pass-through |
+| `aln` | Federal Assistance Listing Number |
 | `programPeriod` | Text display string |
 | `projectStartDate` / `projectEndDate` | Dates |
 | `completionReportDate` / `finalReportDate` | Dates |
@@ -165,60 +197,84 @@ Replaces ~70 manually managed Google Sheets. Coordinators upload data, directors
 | `cpsBudgetPerson` | Budget staff name |
 | `isbeContactPerson` / `isbePhone` / `isbeFax` | ISBE-side contact |
 | `agencyLocation` | e.g. "Springfield, IL" |
-| `isbeContactDirectoryUrl` | URL to ISBE contact page |
 | `arAmount` | Accounts receivable amount |
 | `fiscalYear` | e.g. `2026` |
 
-**FsgReport** — 1 per contract normally; 2 during fiscal year crossover
+**FsgReport** — up to 2 per contract (current + next period during fiscal year crossover)
+
+`parsedData` shape:
+```typescript
+{
+  reportDate?: string
+  grantValues?: string[]
+  lines: Array<{
+    accountCode: string   // function/program code: "1000", "2110"
+    objectCode: string    // expenditure type: "100", "200"
+    description: string
+    currentPeriod: number
+    inceptionToDate: number
+  }>
+  totalCurrentPeriod?: number
+  totalInceptionToDate?: number
+}
+```
+
+**BudgetUpload** — 1 per contract per fiscal year
+
+`parsedData` shape:
+```typescript
+{
+  lines: Array<{
+    accountCode: string   // e.g. "1000", "2110"
+    objectCode: string    // e.g. "100", "200"
+    description: string
+    amount: number
+  }>
+  totalAmount: number
+}
+```
+
+ISBE Frizz budget Excel column mapping: col E = accountCode, col F = objectCode, col C = description (strip parens), col D = amount.
+
+**GrantAssignment** — access control per contract (`editor` or `viewer`)
+
+**CashEntry** — (Phase 2.5) manual ISBE payment transaction ledger
 
 | Field | Notes |
 |-------|-------|
 | `contractId` | FK to Contract |
-| `period` | `"current"` or `"next"` (crossover only) |
-| `pdfStorageKey` | File storage reference |
-| `parsedData` | JSON of AI-extracted line items |
-| `uploadedAt` / `uploadedBy` | Audit fields |
-
-**BudgetUpload** — 1 per contract, from ISBE Frizz (Excel)
-
-**GrantAssignment** — access control per contract
-
-| Field | Notes |
-|-------|-------|
-| `contractId` | FK to Contract |
-| `userId` | FK to User |
-| `role` | `"editor"` or `"viewer"` |
+| `fiscalYear` | e.g. 2025, 2026 |
+| `invoiceNo` | Invoice or receipt number |
+| `claimPeriod` | Free text date range: "7/1/24–9/30/24" |
+| `accountingPeriodDate` | Date booked in accounting system |
+| `claimedAmount` | Positive = claim/accrual |
+| `cashReceipts` | Negative = payment received from ISBE |
+| `advanceOffset` | Advance or offset amount |
+| `comments` | Free text |
 
 #### Access Rules
 
-- **One editor per contract** — assigned coordinator; reassignable (old editor loses edit)
-- **Multiple viewers per contract** — anyone with `grants_isbe:view`
-- **Directors (Annabelle, Alma)** — always have edit access to all contracts via role-level permission (`grants_isbe:edit`), no per-contract assignment needed
-- Directors can reassign contracts between coordinators
+- **Director** (`grants_isbe:manage` or `isSuperAdmin`) — view all contracts, assign/reassign, import
+- **Coordinator** (`grants_isbe:edit`) — upload/edit only on contracts where assigned as `editor`
+- **Viewer** (`grants_isbe:view`) — read-only; per-contract `viewer` assignment required
+- **Per-contract roles**: `editor` = full upload/edit access; `viewer` = read-only
 
-#### Views
+### Phase 2.5 — ISBE Grants Analysis Pages 🚧 In Planning
 
-1. **Grant list** — table of all contracts for the current FY; coordinator sees only assigned; directors see all; filterable by status, coordinator, fund
-2. **Grant detail** — contract metadata + budget + FSG tabs; shows all grantValues aggregated
-3. **FSG upload + parse** — upload PDF → AI extracts line items → review/confirm → stored
-4. **Budget upload** — drop Excel from Frizz → parsed and stored
-5. **Master import** — bulk upload the FY master list CSV to seed all contracts for a new fiscal year
+Three new tabs added to the contract detail page:
 
-#### FSG Parsing Strategy
+1. **Cash Summary** — manual ISBE payment transaction ledger with running A/R balance, FY subtotals
+2. **ISBE Report** — standard ISBE expenditure form; FSG inception-to-date data pivoted by accountCode × objectCode; plus cash summary section
+3. **Reconciliation** — budget vs FSG_Current vs FSG_Next by accountCode+objectCode, with per-line overrun flags and group subtotals
 
-FSG PDFs use CID-encoded fonts — standard text extraction (pdfplumber, etc.) produces garbled output. Approach:
-- Upload PDF to server → send to Claude API as vision input
-- Extract structured data: expenditure lines by object code, amounts, period dates
-- Return JSON → coordinator reviews → confirms → saved to DB
+Also includes parser fixes:
+- Budget parser: fix column mapping, add accountCode field, implement Excel (.xlsx) support
+- FSG parser: update AI prompt to extract accountCode and objectCode as separate fields
 
-#### Key Business Rules
-
-- `batchCode = "Need"` → FSG not yet available (ISBE hasn't issued batch code)
-- Each FSG covers all `grantValues` under the contract (ISBE issues per contract, not per fund code)
-- Budget comes from ISBE Frizz (not CPS Oracle) — one file per contract, no bulk download
-- FSG comes from CPS Oracle — one PDF per contract per reporting period
+Branch: `feature/analysis-pages`
 
 ### Future Phases
+
 - Non-ISBE Grants app
 - Payroll Efficiencies app
 - Payroll Final Payout app
@@ -228,42 +284,42 @@ FSG PDFs use CID-encoded fonts — standard text extraction (pdfplumber, etc.) p
 
 ---
 
-## Environment Variables
+## Seed Data
 
-See `.env.example` for the full list. Key variables:
+Bootstrapped via `npx prisma db seed`:
+
+- **Permissions**: resource × action pairs
+- **Roles**: `super_admin`, `grants_coordinator` (view + edit), `grants_director` (view + edit + manage)
+- **App tiles**: ISBE Grants (`isActive: true`), Non-ISBE Grants, Payroll Efficiencies, Payroll Final Payout
+- **Super admin**: `aziz@flowlyst.io` → `super_admin` role
+- **System settings**: `ai_provider: "claude"`, `ai_model: "claude-opus-4-6"`
+
+---
+
+## Environment Variables
 
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | Neon pooled connection (app runtime) |
-| `DIRECT_URL` | Neon direct connection (prisma migrations) |
-| `AUTH_SECRET` | NextAuth signing secret (`openssl rand -base64 32`) |
+| `AUTH_SECRET` | NextAuth signing secret |
+| `AUTH_URL` | Full app URL (e.g. https://app.vercel.app) |
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `ALLOWED_EMAIL_DOMAINS` | Comma-separated allowed domains (e.g. `cps.edu`) |
-| `DEV_ALLOWED_EMAILS` | Dev bypass emails (e.g. `aziz@flowlyst.io`) |
+| `ALLOWED_EMAIL_DOMAINS` | e.g. `cps.edu` |
+| `DEV_ALLOWED_EMAILS` | Dev bypass e.g. `aziz@flowlyst.io` |
+| `ANTHROPIC_API_KEY` | Claude API for FSG parsing |
+| `OPENAI_API_KEY` | OpenAI API (optional, alternate FSG parser) |
+| `GOOGLE_AI_API_KEY` | Google AI (optional, alternate FSG parser) |
 
 ---
 
 ## Key Commands
 
 ```bash
-npm run dev                    # Start dev server
+npm run dev                    # Start dev server (use Node 22 — see AGENTS.md)
 npm run build                  # Production build
 npx prisma migrate dev         # Run migrations
 npx prisma generate            # Regenerate client after schema changes
-npx prisma db seed             # Seed initial data
+tsx prisma/seed.ts             # Seed initial data (configured in prisma.config.ts)
 npx prisma studio              # GUI for database
 ```
-
----
-
-## Verification Checklist
-
-- [ ] `npm run dev` boots at `localhost:3000`
-- [ ] `/dashboard` redirects unauthenticated users to `/login`
-- [ ] Google sign-in works and lands on `/dashboard`
-- [ ] Non-CPS email (without `DEV_ALLOWED_EMAILS`) → `?error=unauthorized_domain`
-- [ ] Super admin sees "Admin" in TopNav → `/admin` accessible
-- [ ] Admin can add user, assign role, see correct tiles appear
-- [ ] Deactivated user rejected on next sign-in
-- [ ] App tile hidden when user lacks `requiredPermission`

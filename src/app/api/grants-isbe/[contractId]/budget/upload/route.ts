@@ -36,6 +36,7 @@ export async function POST(
   const formData = await req.formData()
   const file = formData.get("file") as File | null
   const fiscalYearRaw = formData.get("fiscalYear") as string | null
+  const sheetName = formData.get("sheetName") as string | null
 
   if (!file) return NextResponse.json({ error: "file is required" }, { status: 400 })
   if (!fiscalYearRaw) return NextResponse.json({ error: "fiscalYear is required" }, { status: 400 })
@@ -50,7 +51,7 @@ export async function POST(
 
   let parsedData
   try {
-    parsedData = await parseBudgetFile(buffer, fileName)
+    parsedData = await parseBudgetFile(buffer, fileName, sheetName)
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to parse file" },
