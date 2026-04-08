@@ -162,6 +162,10 @@ model Contract {
   agencyLocation          String?
   isbeContactDirectoryUrl String?
   arAmount                Decimal?  @db.Decimal(14, 2)
+  isbeVoucheredToDate     Decimal?  @db.Decimal(14, 2)
+  isbeOutstandingObligs   Decimal?  @db.Decimal(14, 2)
+  isbeCarryover           Decimal?  @db.Decimal(14, 2)
+  reconciliationAdjustments Json?
   fiscalYear              Int
   isActive                Boolean   @default(true)
   createdAt               DateTime  @default(now())

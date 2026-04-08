@@ -19,6 +19,7 @@ type Props = {
   isDirector: boolean
   currentUserId: string
   cashEntries: CashEntry[]
+  isbeFootnotes: { style: "number" | "letter" | "bullet"; items: string[] }
 }
 
 export default function GrantDetailClient({
@@ -27,6 +28,7 @@ export default function GrantDetailClient({
   isDirector,
   currentUserId,
   cashEntries,
+  isbeFootnotes,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("info")
   const [showAssign, setShowAssign] = useState(false)
@@ -143,7 +145,7 @@ export default function GrantDetailClient({
         />
       )}
       {activeTab === "isbe-report" && (
-        <GrantIsbeReportTab contract={contract} cashEntries={cashEntries} />
+        <GrantIsbeReportTab contract={contract} cashEntries={cashEntries} footnotes={isbeFootnotes} />
       )}
       {activeTab === "reconciliation" && (
         <GrantReconciliationTab contract={contract} />

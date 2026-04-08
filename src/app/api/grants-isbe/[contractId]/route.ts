@@ -80,6 +80,10 @@ export async function PATCH(
       agencyLocation: body.agencyLocation,
       isbeContactDirectoryUrl: body.isbeContactDirectoryUrl,
       isActive: body.isActive,
+      isbeVoucheredToDate: body.isbeVoucheredToDate !== undefined ? body.isbeVoucheredToDate : undefined,
+      isbeOutstandingObligs: body.isbeOutstandingObligs !== undefined ? body.isbeOutstandingObligs : undefined,
+      isbeCarryover: body.isbeCarryover !== undefined ? body.isbeCarryover : undefined,
+      reconciliationAdjustments: body.reconciliationAdjustments !== undefined ? body.reconciliationAdjustments : undefined,
     },
   })
 

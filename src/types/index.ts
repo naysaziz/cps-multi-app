@@ -57,6 +57,10 @@ export type ContractDetail = Omit<ContractSummary, "fsgReports" | "budgetUploads
   agencyLocation: string | null
   isbeContactDirectoryUrl: string | null
   arAmount: string | null
+  isbeVoucheredToDate: string | null
+  isbeOutstandingObligs: string | null
+  isbeCarryover: string | null
+  reconciliationAdjustments: unknown
   fsgReports: {
     id: string
     period: string

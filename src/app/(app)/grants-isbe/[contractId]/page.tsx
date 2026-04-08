@@ -4,6 +4,18 @@ import { prisma } from "@/lib/prisma"
 import { ContractDetail, CashEntry } from "@/types"
 import GrantDetailClient from "@/components/grants-isbe/GrantDetailClient"
 
+type IsbeFootnotes = { style: "number" | "letter" | "bullet"; items: string[] }
+
+async function getFootnotes(): Promise<IsbeFootnotes> {
+  const row = await prisma.systemSetting.findUnique({ where: { key: "isbe_footnotes" } })
+  if (!row) return { style: "number", items: [] }
+  try {
+    return JSON.parse(row.value) as IsbeFootnotes
+  } catch {
+    return { style: "number", items: [] }
+  }
+}
+
 export default async function GrantDetailPage({
   params,
 }: {
@@ -51,6 +63,8 @@ export default async function GrantDetailPage({
       })
     : []
 
+  const footnotes = await getFootnotes()
+
   // Fetch cash entries
   const rawCashEntries = await prisma.cashEntry.findMany({
     where: { contractId },
@@ -80,6 +94,10 @@ export default async function GrantDetailPage({
     ...contract,
     commitmentAmount: decStr(contract.commitmentAmount),
     arAmount: decStr(contract.arAmount),
+    isbeVoucheredToDate: decStr(contract.isbeVoucheredToDate),
+    isbeOutstandingObligs: decStr(contract.isbeOutstandingObligs),
+    isbeCarryover: decStr(contract.isbeCarryover),
+    reconciliationAdjustments: contract.reconciliationAdjustments ?? null,
     projectStartDate: dtStr(contract.projectStartDate),
     projectEndDate: dtStr(contract.projectEndDate),
     completionReportDate: dtStr(contract.completionReportDate),
@@ -108,6 +126,7 @@ export default async function GrantDetailPage({
       isDirector={isDirector}
       currentUserId={session.user.id}
       cashEntries={cashEntries}
+      isbeFootnotes={footnotes}
     />
   )
 }

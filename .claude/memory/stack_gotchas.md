@@ -6,11 +6,9 @@ type: feedback
 
 ## Node.js version
 
-Homebrew Node at `/opt/homebrew/bin/node` (v19.3.0) takes precedence over nvm in PATH.
+nvm node is active (`~/.nvm/versions/node/v20.19.5`). The Homebrew node conflict was resolved (`brew unlink node`). No PATH prefix needed in Bash commands.
 
-**Why:** Homebrew sets its bin dir early; nvm injects after. `nvm use` / `nvm alias default` don't fix it in current shell.
-
-**How to apply:** Run `brew unlink node` once to remove the Homebrew node. Project requires Node 22.22.2+ (Prisma 7 needs 22.12+, Next.js 16 needs 20.9+). In Bash tool, prefix with `PATH="$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"`. After fresh `npm install`, always run `npx prisma generate` before building.
+**How to apply:** Just run `node`/`npm`/`npx` directly. After fresh `npm install`, always run `npx prisma generate` before building.
 
 ---
 

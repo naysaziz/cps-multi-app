@@ -243,4 +243,4 @@ Add cash entries fetch alongside existing budget/FSG fetches. Pass to `GrantDeta
 - `String(v)` — Prisma 7 Decimal serialization for client components
 - Director check = `isSuperAdmin || grants_isbe:manage` ONLY — never `grants_isbe:edit`
 - After `npm install`, run `npx prisma generate` before building
-- Node must be v22: `PATH="$HOME/.nvm/versions/node/v22.22.2/bin:$PATH"` prefix on bash commands
+- Node: nvm is active, no PATH prefix needed

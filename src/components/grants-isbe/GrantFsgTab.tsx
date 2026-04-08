@@ -275,7 +275,7 @@ function FsgReportView({
           <thead className="bg-gray-50 border-b border-border">
             <tr>
               {hasAccountCode && (
-                <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Acct</th>
+                <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Function Code</th>
               )}
               {hasFunctionDescription && (
                 <th className="text-left px-4 py-2.5 font-medium text-charcoal-muted">Function</th>

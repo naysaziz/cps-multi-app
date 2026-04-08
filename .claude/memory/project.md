@@ -8,7 +8,7 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 **Why:** User needs a working demo to show CPS for approval before full buildout.
 
-**Current phase:** Phase 2.5 COMPLETE — Analysis pages (Cash Summary, ISBE Report, Reconciliation) built on branch `feature/analysis-pages`. Latest work focused on hardening budget/FSG upload parsing, analysis tab compatibility, and FSG metadata display before demo review.
+**Current phase:** Phase 2.5+ IN PROGRESS on branch `feature/analysis-pages`. Analysis pages built and significantly hardened. ISBE Report tab fully redesigned (dynamic rows, manual inputs, footnotes from DB). Admin settings redesigned with sidebar layout.
 
 **How to apply:** Prioritize demoable features. Don't add audit logging, permission caching, or session strategy optimizations until demo-approved.
 
@@ -182,6 +182,32 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 ---
 
+## What's built — Phase 2.5+ ISBE Report redesign (branch: feature/analysis-pages)
+
+### New Contract fields (migrated)
+- `isbeVoucheredToDate Decimal?` — Line 32, manual input per contract
+- `isbeOutstandingObligs Decimal?` — Line 34, manual input per contract
+- `isbeCarryover Decimal?` — Carryover for commitment amount breakdown, manual input
+
+### SystemSetting changes
+- `isbe_footnotes` — JSON key: `{ style: "number"|"letter"|"bullet", items: string[] }`
+- Old keys `isbe_footnote_1/2/3` are stale in DB (harmless), no longer used
+
+### ISBE Report tab (`GrantIsbeReportTab`)
+- Expenditure table: fully dynamic from FSG parsed data — no hardcoded function codes
+- Only non-zero rows shown; function description from `functionDescription` FSG field; object header label from `description` FSG field
+- Cash Summary: L32 (Vouchered) and L34 (Outstanding Obligations) are editable inputs; Carryover is editable inside Commitment Amount breakdown; L33/L35/L38/L39 auto-calculated; Save button PATCHes contract
+- Footnotes rendered from DB with computed prefix (number/letter/bullet)
+
+### Admin Settings redesign
+- Sidebar layout: left nav (AI Parsing / ISBE Footnotes), right content panel
+- ISBE Footnotes section: dynamic list, add/delete/edit items, style picker (1·2·3 / A·B·C / •)
+
+### No-hardcoding rule
+- Added to CLAUDE.md: domain data (labels, footnotes, rates, reference lists) must live in DB or come from uploads — never hardcoded in component code
+
+---
+
 ## What's built — Phase 2.5 Analysis Pages (complete, branch: feature/analysis-pages)
 
 - **Budget parser fixed**: now reads accountCode (col E), objectCode (col F), description stripped of parens (col C), amount (col D). Excel (.xlsx) support implemented via `xlsx` package.
@@ -196,10 +222,19 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 ---
 
-## Pending items
+## Pending items — what's next
 
-- Merge `feature/analysis-pages` into main after demo review
-- Verify fresh FSG re-upload against sample PDFs (`docs/440054-440055 Title IV A 24-4400 FSG Jun 11.24.pdf`, `docs/440054-440055 Title IV A 24-4400 FSG Nov 11.24.pdf`) and confirm analysis tabs consume the new parsedData correctly
-- Verify budget upload end-to-end with both compact CSV (`docs/Budget.csv`) and multi-tab Excel workbook flow
-- Per-grant AI provider selector (future work)
-- Phase 3: Non-ISBE Grants or Payroll (TBD after CPS demo approval)
+**Before demo / merge to main:**
+1. Re-upload both FSG PDFs (`docs/440054-440055 Title IV A 24-4400 FSG Jun 11.24.pdf` and Nov version) and verify:
+   - `functionDescription` field is populated in parsedData (needed for ISBE Report function column descriptions)
+   - `objectCode` `1..8` → `100..800` mapping is correct
+   - ISBE Report table rows and object headers populate correctly
+2. Test ISBE Report manual inputs: enter Vouchered to Date + Outstanding Obligations + Carryover, save, reload — confirm values persist
+3. Verify budget upload end-to-end (compact CSV `docs/Budget.csv` + multi-tab Excel)
+4. Reconciliation tab: validate against fresh re-uploaded FSG data
+5. Merge `feature/analysis-pages` → main
+
+**After demo approval:**
+- Phase 3: Non-ISBE Grants or Payroll (TBD)
+- Per-grant AI provider selector
+- Broader admin sidebar (users/roles/apps/settings unified nav)
