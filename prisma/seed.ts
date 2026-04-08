@@ -246,6 +246,21 @@ async function main() {
     create: { key: "ai_model", value: "claude-opus-4-6" },
     update: {},
   })
+  await prisma.systemSetting.upsert({
+    where: { key: "isbe_footnotes" },
+    create: {
+      key: "isbe_footnotes",
+      value: JSON.stringify({
+        style: "number",
+        items: [
+          "If expenditures are shown in these functions, the indirect cost rate cannot be used.",
+          "In no instances can Capital Outlay or Facilities Acquisition and Construction Services be included in the indirect cost application.",
+          "Pre-payments are disbursements made in the prior year project applied to the current year project. Line 32 includes pre-payments.",
+        ],
+      }),
+    },
+    update: {},
+  })
 
   // 5. Super admin user
   console.log("  → Creating super admin user (aziz@flowlyst.io)...")

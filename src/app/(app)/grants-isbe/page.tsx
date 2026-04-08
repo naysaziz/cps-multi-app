@@ -15,7 +15,6 @@ export default async function GrantsIsbeListPage() {
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   const contracts = await prisma.contract.findMany({

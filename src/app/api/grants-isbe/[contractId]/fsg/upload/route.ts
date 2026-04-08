@@ -9,7 +9,6 @@ async function resolveEditAccess(contractId: string) {
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   if (!isDirector) {
@@ -45,8 +44,17 @@ export async function POST(
 
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  // Parse the FSG PDF using Claude AI vision
-  const parsedData = await parseFsgPdf(buffer)
+  let parsedData
+  try {
+    parsedData = await parseFsgPdf(buffer)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to parse FSG PDF"
+    const status = message.includes("RESOURCE_EXHAUSTED") || message.includes("quota")
+      ? 503
+      : 400
+
+    return NextResponse.json({ error: message }, { status })
+  }
 
   const report = await prisma.fsgReport.upsert({
     where: { contractId_period: { contractId, period } },

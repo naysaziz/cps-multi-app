@@ -2,25 +2,24 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-function isGrantsEditor(
+function isGrantsDirector(
   user: { isSuperAdmin: boolean; permissions: string[] } | undefined
 ) {
   return (
     user?.isSuperAdmin ||
-    user?.permissions.includes("grants_isbe:edit") ||
     user?.permissions.includes("grants_isbe:manage")
   )
 }
 
 // GET /api/grants-isbe — list contracts
-// Directors (grants_isbe:edit) see all; coordinators see only assigned
+// Directors (grants_isbe:manage) see all; coordinators see only assigned
 export async function GET() {
   const session = await auth()
   if (!session?.user) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
-  const canViewAll = isGrantsEditor(session?.user)
+  const canViewAll = isGrantsDirector(session?.user)
 
   const contracts = await prisma.contract.findMany({
     where: canViewAll
@@ -46,7 +45,7 @@ export async function GET() {
 // POST /api/grants-isbe — bulk import contracts from master list
 export async function POST(req: NextRequest) {
   const session = await auth()
-  if (!isGrantsEditor(session?.user)) {
+  if (!isGrantsDirector(session?.user)) {
     return new NextResponse("Forbidden", { status: 403 })
   }
 

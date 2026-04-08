@@ -1,8 +1,20 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { ContractDetail } from "@/types"
+import { ContractDetail, CashEntry } from "@/types"
 import GrantDetailClient from "@/components/grants-isbe/GrantDetailClient"
+
+type IsbeFootnotes = { style: "number" | "letter" | "bullet"; items: string[] }
+
+async function getFootnotes(): Promise<IsbeFootnotes> {
+  const row = await prisma.systemSetting.findUnique({ where: { key: "isbe_footnotes" } })
+  if (!row) return { style: "number", items: [] }
+  try {
+    return JSON.parse(row.value) as IsbeFootnotes
+  } catch {
+    return { style: "number", items: [] }
+  }
+}
 
 export default async function GrantDetailPage({
   params,
@@ -34,7 +46,6 @@ export default async function GrantDetailPage({
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   const assignment = contract.assignments.find((a) => a.userId === session.user.id)
@@ -52,6 +63,30 @@ export default async function GrantDetailPage({
       })
     : []
 
+  const footnotes = await getFootnotes()
+
+  // Fetch cash entries
+  const rawCashEntries = await prisma.cashEntry.findMany({
+    where: { contractId },
+    orderBy: [{ accountingPeriodDate: "asc" }, { createdAt: "asc" }],
+  })
+
+  const cashEntries: CashEntry[] = rawCashEntries.map((e) => ({
+    id: e.id,
+    contractId: e.contractId,
+    fiscalYear: e.fiscalYear,
+    invoiceNo: e.invoiceNo,
+    claimPeriod: e.claimPeriod,
+    accountingPeriodDate: e.accountingPeriodDate?.toISOString() ?? null,
+    claimedAmount: e.claimedAmount != null ? String(e.claimedAmount) : null,
+    cashReceipts: e.cashReceipts != null ? String(e.cashReceipts) : null,
+    advanceOffset: e.advanceOffset != null ? String(e.advanceOffset) : null,
+    comments: e.comments,
+    createdById: e.createdById,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  }))
+
   const decStr = (v: unknown) => (v != null ? String(v) : null)
   const dtStr = (v: Date | null) => v?.toISOString() ?? null
 
@@ -59,6 +94,10 @@ export default async function GrantDetailPage({
     ...contract,
     commitmentAmount: decStr(contract.commitmentAmount),
     arAmount: decStr(contract.arAmount),
+    isbeVoucheredToDate: decStr(contract.isbeVoucheredToDate),
+    isbeOutstandingObligs: decStr(contract.isbeOutstandingObligs),
+    isbeCarryover: decStr(contract.isbeCarryover),
+    reconciliationAdjustments: contract.reconciliationAdjustments ?? null,
     projectStartDate: dtStr(contract.projectStartDate),
     projectEndDate: dtStr(contract.projectEndDate),
     completionReportDate: dtStr(contract.completionReportDate),
@@ -86,6 +125,8 @@ export default async function GrantDetailPage({
       allUsers={allUsers}
       isDirector={isDirector}
       currentUserId={session.user.id}
+      cashEntries={cashEntries}
+      isbeFootnotes={footnotes}
     />
   )
 }

@@ -6,6 +6,7 @@
       "Edit",
       "Glob",
       "Grep",
+      "Find",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",

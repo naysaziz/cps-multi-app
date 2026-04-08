@@ -8,7 +8,6 @@ export default async function GrantImportPage() {
 
   const isDirector =
     session.user.isSuperAdmin ||
-    session.user.permissions.includes("grants_isbe:edit") ||
     session.user.permissions.includes("grants_isbe:manage")
 
   if (!isDirector) redirect("/grants-isbe")
