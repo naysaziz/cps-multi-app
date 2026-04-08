@@ -182,7 +182,7 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 
 ---
 
-## What's built — Phase 2.5+ ISBE Report redesign (branch: feature/analysis-pages)
+## What's built — Phase 2.5+ ISBE Report redesign + Reconciliation redesign (merged to main 2026-04-08)
 
 ### New Contract fields (migrated)
 - `isbeVoucheredToDate Decimal?` — Line 32, manual input per contract
@@ -206,9 +206,17 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 ### No-hardcoding rule
 - Added to CLAUDE.md: domain data (labels, footnotes, rates, reference lists) must live in DB or come from uploads — never hardcoded in component code
 
+### Reconciliation tab redesign (complete)
+- **Schema**: added `reconciliationAdjustments Json?` to Contract — stores `{ "acct|obj": { overrun, adjustment } }` per contract, persisted via PATCH
+- **Columns**: Object/Desc | Budget | FSG Current | FSG Next | Total Program Cost | Budget Line Overrun (manual) | No Budget (formula: `total ≠ 0 && budget is null → -total`) | Adjustment (manual) | Cumulative Total | YTD Unexpended Balance
+- **Grouped by function code**: collapsible section headers (click to collapse, "Collapse All / Expand All" button). Collapsed = summary view. No redundant function code repetition in detail rows.
+- **Manual inputs**: `NumberInput` component — comma-formatted when unfocused, raw when focused. Debounced auto-save (800ms) via PATCH.
+- **CSS cascade sizing**: `text-[13px]` on `<table>`, `text-[14px]` on section header rows, `text-[11px]` on thead — no per-cell font overrides.
+- **"Acct" renamed "Function Code"** in GrantBudgetTab and GrantFsgTab column headers.
+
 ---
 
-## What's built — Phase 2.5 Analysis Pages (complete, branch: feature/analysis-pages)
+## What's built — Phase 2.5 Analysis Pages (complete, merged to main)
 
 - **Budget parser fixed**: now reads accountCode (col E), objectCode (col F), description stripped of parens (col C), amount (col D). Excel (.xlsx) support implemented via `xlsx` package.
 - **Budget parser expanded further**: also supports compact 4-column budget CSV exports (`docs/Budget.csv` style) by deriving `accountCode` from combined account cell and `objectCode` from object description parentheses.
@@ -216,23 +224,19 @@ Internal multi-app dashboard platform for Chicago Public Schools (CPS) staff. De
 - **CashEntry model**: migrated to DB (`cash_entries` table). Manual ISBE invoice/receipt ledger per contract.
 - **API routes**: `/api/grants-isbe/[contractId]/cash` (GET/POST) and `/cash/[entryId]` (PATCH/DELETE)
 - **Three new tabs**: Cash Summary, ISBE Report, Reconciliation — all modern CPS-branded with stat cards, color coding, dynamic rows/columns from actual data (nothing hardcoded)
-- **GrantBudgetTab**: supports Excel worksheet picking before upload, and displays `accountCode` when present
-- **GrantFsgTab**: now surfaces report identity metadata (report title, grant name, report date, generated date/label, grant code, period) so uploaded FSGs can be verified visually and not mismatched
-- **Analysis tab hardening**: recent review/fix pass addressed ordering/date issues in Cash Summary and tightened math/compatibility assumptions in ISBE Report/Reconciliation, though those surfaces should still be checked against fresh re-uploaded sample data during demo prep
+- **GrantBudgetTab**: supports Excel worksheet picking before upload, and displays accountCode when present
+- **GrantFsgTab**: now surfaces report identity metadata (report title, grant name, report date, generated date/label, grant code, period)
+- **Analysis tab hardening**: Reconciliation double-counting fixed (max ITD not sum), Cash Summary ordering fixed (accountingPeriodDate then createdAt)
 
 ---
 
 ## Pending items — what's next
 
-**Before demo / merge to main:**
-1. Re-upload both FSG PDFs (`docs/440054-440055 Title IV A 24-4400 FSG Jun 11.24.pdf` and Nov version) and verify:
-   - `functionDescription` field is populated in parsedData (needed for ISBE Report function column descriptions)
-   - `objectCode` `1..8` → `100..800` mapping is correct
-   - ISBE Report table rows and object headers populate correctly
-2. Test ISBE Report manual inputs: enter Vouchered to Date + Outstanding Obligations + Carryover, save, reload — confirm values persist
-3. Verify budget upload end-to-end (compact CSV `docs/Budget.csv` + multi-tab Excel)
-4. Reconciliation tab: validate against fresh re-uploaded FSG data
-5. Merge `feature/analysis-pages` → main
+**Validation still needed (pre-demo):**
+1. Re-upload both FSG PDFs and verify `functionDescription` populates, object codes map `1..8 → 100..800`, ISBE Report table renders correctly
+2. Test ISBE Report manual inputs persist (Vouchered to Date, Outstanding Obligations, Carryover)
+3. Verify budget upload end-to-end (compact CSV + multi-tab Excel)
+4. Reconciliation: validate against fresh re-uploaded FSG data; test Budget Line Overrun + Adjustment inputs save and reload
 
 **After demo approval:**
 - Phase 3: Non-ISBE Grants or Payroll (TBD)
