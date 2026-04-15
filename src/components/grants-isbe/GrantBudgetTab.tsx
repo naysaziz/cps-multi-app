@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ContractDetail } from "@/types"
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export default function GrantBudgetTab({ contract, canEdit }: Props) {
+  const router = useRouter()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -55,7 +57,7 @@ export default function GrantBudgetTab({ contract, canEdit }: Props) {
         throw new Error(data.error ?? "Upload failed")
       }
 
-      window.location.reload()
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {

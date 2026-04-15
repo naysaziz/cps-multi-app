@@ -35,6 +35,10 @@ export default async function GrantsIsbeListPage() {
   const serialized: ContractSummary[] = contracts.map((c) => ({
     ...c,
     commitmentAmount: c.commitmentAmount != null ? String(c.commitmentAmount) : null,
+    arAmount: c.arAmount != null ? String(c.arAmount) : null,
+    isbeVoucheredToDate: c.isbeVoucheredToDate != null ? String(c.isbeVoucheredToDate) : null,
+    isbeOutstandingObligs: c.isbeOutstandingObligs != null ? String(c.isbeOutstandingObligs) : null,
+    isbeCarryover: c.isbeCarryover != null ? String(c.isbeCarryover) : null,
     projectStartDate: c.projectStartDate?.toISOString() ?? null,
     projectEndDate: c.projectEndDate?.toISOString() ?? null,
     fsgReports: c.fsgReports.map((r) => ({
@@ -68,7 +72,7 @@ export default async function GrantsIsbeListPage() {
         )}
       </div>
 
-      <GrantListClient contracts={serialized} isDirector={isDirector} />
+      <GrantListClient contracts={serialized} isDirector={isDirector} currentUserId={session.user.id} />
     </div>
   )
 }

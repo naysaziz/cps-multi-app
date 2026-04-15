@@ -246,6 +246,72 @@ export default function GrantIsbeReportTab({
 
   const hasData = fsgLines.length > 0
 
+  // ── CSV download ──────────────────────────────────────────
+  function downloadCsv() {
+    const escape = (v: string | number | null | undefined) => {
+      const s = v == null ? "" : String(v)
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s
+    }
+    const row = (...cols: (string | number | null | undefined)[]) =>
+      cols.map(escape).join(",")
+
+    const rows: string[] = []
+
+    // Header metadata
+    rows.push(row("ISBE Expenditure Report"))
+    rows.push(row("Contract No", contract.contractNo))
+    rows.push(row("Grant Code", contract.grantValues?.join(", ") ?? ""))
+    rows.push(row("Cumulative Through", activeFsg?.parsedData
+      ? formatDate((activeFsg.parsedData as FsgData).reportDate)
+      : ""))
+    rows.push(row("Generated", new Date().toLocaleDateString("en-US")))
+    rows.push("")
+
+    // Expenditure table header
+    const objHeaders = objectCodes.map(
+      (obj) => `${obj} ${objDescriptions.get(obj) ?? ""}`.trim()
+    )
+    rows.push(row("Function Code", "Function Description", ...objHeaders, "Total"))
+
+    // Data rows
+    for (const acct of nonZeroAccounts) {
+      const rowTotal = objectCodes.reduce((s, obj) => s + (lookup.get(`${acct}|${obj}`) ?? 0), 0)
+      const cells = objectCodes.map((obj) => lookup.get(`${acct}|${obj}`) ?? 0)
+      rows.push(row(acct, acctDescriptions.get(acct) ?? "", ...cells, rowTotal))
+    }
+
+    // Totals rows
+    const colTotals = objectCodes.map((obj) =>
+      accountCodes.reduce((s, acct) => s + (lookup.get(`${acct}|${obj}`) ?? 0), 0)
+    )
+    rows.push(row("Total Direct Costs", "", ...colTotals, totalITD))
+    rows.push(row("Approved Indirect Costs", "", ...objectCodes.map(() => ""), ""))
+    rows.push(row("Total Expenditures", "", ...colTotals, totalITD))
+    rows.push("")
+
+    // Cash summary
+    rows.push(row("Cash Summary"))
+    rows.push(row("Vouchered to Date (L32)", voucheredNum))
+    rows.push(row("Cumulative Expenditures (L33)", cumulativeExpenditures))
+    rows.push(row("Outstanding Obligations (L34)", outstandingNum))
+    rows.push(row("Total Expenditures + Obligations (L35)", totalExpendPlusObligs))
+    rows.push(row("Carryover", carryoverNum))
+    rows.push(row("Current Year", commitmentAmount))
+    rows.push(row("Commitment Amount Total", adjustedCommitment))
+    rows.push(row("Balance (L38)", balance))
+    rows.push(row("Adjusted Commitment Amount (L39)", adjustedCommitment))
+
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `ISBE_Report_${contract.contractNo}_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-8">
 
@@ -296,10 +362,18 @@ export default function GrantIsbeReportTab({
 
       {/* ── Expenditure table ────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <p className="text-xs font-semibold text-charcoal-muted uppercase tracking-wide">
             Expenditures by Function × Object (Inception to Date)
           </p>
+          {hasData && (
+            <button
+              onClick={downloadCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cobalt border border-cobalt/30 rounded-md hover:bg-cobalt-light transition-colors"
+            >
+              ↓ Download CSV
+            </button>
+          )}
         </div>
 
         {!hasData ? (

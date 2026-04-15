@@ -7,6 +7,7 @@ import { ContractSummary } from "@/types"
 type Props = {
   contracts: ContractSummary[]
   isDirector: boolean
+  currentUserId: string
 }
 
 function statusBadge(contract: ContractSummary) {
@@ -21,9 +22,10 @@ function statusBadge(contract: ContractSummary) {
   return { label: "FSG Only", color: "bg-purple-100 text-purple-700" }
 }
 
-export default function GrantListClient({ contracts, isDirector }: Props) {
+export default function GrantListClient({ contracts, isDirector, currentUserId }: Props) {
   const [search, setSearch] = useState("")
   const [fyFilter, setFyFilter] = useState<string>("all")
+  const [accessFilter, setAccessFilter] = useState<"all" | "editor" | "viewer">("all")
 
   const fiscalYears = useMemo(
     () => [...new Set(contracts.map((c) => c.fiscalYear))].sort((a, b) => b - a),
@@ -40,9 +42,14 @@ export default function GrantListClient({ contracts, isDirector }: Props) {
         c.contractNo.toLowerCase().includes(q) ||
         c.grantValues.some((v) => v.includes(q)) ||
         (c.batchCode?.toLowerCase().includes(q) ?? false)
-      return matchFy && matchSearch
+      const myRole = c.assignments.find((a) => a.user.id === currentUserId)?.role
+      const matchAccess =
+        isDirector ||
+        accessFilter === "all" ||
+        myRole === accessFilter
+      return matchFy && matchSearch && matchAccess
     })
-  }, [contracts, search, fyFilter])
+  }, [contracts, search, fyFilter, accessFilter, currentUserId, isDirector])
 
   return (
     <div>
@@ -67,6 +74,17 @@ export default function GrantListClient({ contracts, isDirector }: Props) {
             </option>
           ))}
         </select>
+        {!isDirector && (
+          <select
+            value={accessFilter}
+            onChange={(e) => setAccessFilter(e.target.value as "all" | "editor" | "viewer")}
+            className="px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-cobalt/30"
+          >
+            <option value="all">All Access</option>
+            <option value="editor">Can Edit</option>
+            <option value="viewer">View Only</option>
+          </select>
+        )}
       </div>
 
       {/* Table */}

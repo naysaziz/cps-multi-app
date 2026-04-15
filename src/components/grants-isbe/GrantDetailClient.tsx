@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ContractDetail, CashEntry } from "@/types"
 import GrantInfoTab from "./GrantInfoTab"
@@ -13,6 +14,13 @@ import AssignEditorPanel from "./AssignEditorPanel"
 
 type Tab = "info" | "budget" | "fsg" | "cash" | "isbe-report" | "reconciliation"
 
+type GrantListItem = {
+  id: string
+  contractNo: string
+  grantName: string
+  fiscalYear: number
+}
+
 type Props = {
   contract: ContractDetail
   allUsers: { id: string; name: string | null; email: string | null }[]
@@ -20,6 +28,7 @@ type Props = {
   currentUserId: string
   cashEntries: CashEntry[]
   isbeFootnotes: { style: "number" | "letter" | "bullet"; items: string[] }
+  grantList: GrantListItem[]
 }
 
 export default function GrantDetailClient({
@@ -29,7 +38,9 @@ export default function GrantDetailClient({
   currentUserId,
   cashEntries,
   isbeFootnotes,
+  grantList,
 }: Props) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("info")
   const [showAssign, setShowAssign] = useState(false)
 
@@ -46,13 +57,31 @@ export default function GrantDetailClient({
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
-      {/* Back link */}
-      <Link
-        href="/grants-isbe"
-        className="text-sm text-cobalt hover:underline flex items-center gap-1 mb-6"
-      >
-        ← All Grants
-      </Link>
+      {/* Back link + grant switcher */}
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          href="/grants-isbe"
+          className="text-sm text-cobalt hover:underline flex items-center gap-1 shrink-0"
+        >
+          ← All Grants
+        </Link>
+        {grantList.length > 1 && (
+          <>
+            <span className="text-border">|</span>
+            <select
+              value={contract.id}
+              onChange={(e) => router.push(`/grants-isbe/${e.target.value}`)}
+              className="text-sm border border-border rounded-md px-2 py-1 bg-white text-charcoal focus:outline-none focus:ring-2 focus:ring-cobalt/30 max-w-xs truncate"
+            >
+              {grantList.map((g) => (
+                <option key={g.id} value={g.id}>
+                  FY{g.fiscalYear} — {g.grantName}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-1">

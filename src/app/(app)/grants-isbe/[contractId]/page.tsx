@@ -54,6 +54,15 @@ export default async function GrantDetailPage({
 
   if (!canView) redirect("/dashboard")
 
+  // Fetch grant switcher list (all contracts the user can access)
+  const rawGrantList = await prisma.contract.findMany({
+    where: isDirector
+      ? undefined
+      : { assignments: { some: { userId: session.user.id } } },
+    select: { id: true, contractNo: true, grantName: true, fiscalYear: true },
+    orderBy: [{ fiscalYear: "desc" }, { grantName: "asc" }],
+  })
+
   // Fetch all users for director assignment dropdown
   const allUsers = isDirector
     ? await prisma.user.findMany({
@@ -127,6 +136,7 @@ export default async function GrantDetailPage({
       currentUserId={session.user.id}
       cashEntries={cashEntries}
       isbeFootnotes={footnotes}
+      grantList={rawGrantList}
     />
   )
 }
